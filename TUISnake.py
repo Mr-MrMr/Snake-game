@@ -1,16 +1,19 @@
 from curses import *
 import sys
+import time
 import random
 import time
+import json
 
-menu = ['PLAY', 'OPTIONS', 'EXIT']  # Menu for start
-menu2 = ['PLAY AGAIN', 'EXIT']  # Menu for loses
-menu3 = ['Char of snake: ', 'Char of apple: ', 'Color of snake: ', 'Color of apple: ', 'Back']
+menu = ["PLAY", "PLAY MULTIPLAYER", "OPTIONS", "EXIT"]  # Menu for start
+menu2 = ["PLAY AGAIN", "EXIT"]  # Menu for loses
+menu3 = ["Char of snake: ", "Char of apple: ", "Color of snake: ", "Color of apple: ", "Back"]
 char_of_snake = '#'
 char_of_apple = '8'
 color_of_snake = 5
 color_of_apple = 1
 SnakeParts = []  # Snake`s parts
+client_name = "Snake_game_client"
 
 
 # Making menu
@@ -173,9 +176,28 @@ def square_for_steps(stdscr):
         square_y -= 1
 
 
+def writing_json():
+    myjsonfile = open("snake_game_j.json", "w")
+    json_string = """
+                [
+                    Connection [
+                        client: {0},
+                    ],
+                    ChangeDirection [
+                        client: {0},
+                        direction: {1},
+                    ],
+                ]
+                """.format(client_name, SnakeParts[0][2])
+    json_string = json_string.replace("[", "{")
+    json_string = json_string.replace("]", "}")
+    json.dump(json_string, myjsonfile)
+
+
 def gameplay(stdscr):
     global doineedtoaskthestep
     global SnakeParts
+    h, w = stdscr.getmaxyx()
     h, w = stdscr.getmaxyx()
     apple_y = random.randint(2, h - 3)
     apple_x = random.randint(2, w - 3)
@@ -191,12 +213,16 @@ def gameplay(stdscr):
             step = stdscr.getch()
         if step == KEY_UP:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Up']
+            writing_json()
         elif step == KEY_DOWN:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Down']
+            writing_json()
         elif step == KEY_RIGHT:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Right']
+            writing_json()
         elif step == KEY_LEFT:
-            SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Left']
+            SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], "Left"]
+            writing_json()
         else:
             continue
         if SnakeParts[0][2] == 'Up':
@@ -234,7 +260,7 @@ def gameplay(stdscr):
                 if step == KEY_UP or step == KEY_DOWN:
                     doineedtoaskthestep = 1
                     break
-            elif SnakeParts[0][2] == 'Left':
+            elif SnakeParts[0][2] == "Left":
                 if step == KEY_UP or step == KEY_DOWN:
                     doineedtoaskthestep = 1
                     break
@@ -342,13 +368,25 @@ def mainfunc(stdscr):
         elif key == KEY_DOWN and current_row_idx < len(menu) - 1:
             current_row_idx += 1
         elif key in [10, 13]:
-            if menu[current_row_idx] == 'PLAY':
+            if menu[current_row_idx] == "PLAY":
                 stdscr.clear()
                 make_square(stdscr)
                 gameplay(stdscr)
                 endwin()
                 sys.exit()
-            elif menu[current_row_idx] == 'OPTIONS':
+            if menu[current_row_idx] == "PLAY MULTIPLAYER":
+                stdscr.clear()
+                h, w = stdscr.getmaxyx()
+                x_ip = w // 2 - len("Enter an ip address of the server:") // 2
+                stdscr.addstr(8, x_ip, "Enter an ip address of the server:")
+                stdscr.refresh()
+                echo()
+                stdscr.move(9, x_ip)
+                ip_address = stdscr.getstr().decode("utf-8")
+                noecho()
+                stdscr.refresh()
+                time.sleep(2)
+            elif menu[current_row_idx] == "OPTIONS":
                 current_row_idx = 0
                 while True:
                     global char_of_snake
@@ -363,38 +401,38 @@ def mainfunc(stdscr):
                     elif key == KEY_DOWN and current_row_idx < len(menu3) - 1:
                         current_row_idx += 1
                     elif key in [10, 13]:
-                        if menu3[current_row_idx] == 'Back':
+                        if menu3[current_row_idx] == "Back":
                             current_row_idx = 0
                             break
-                        elif menu3[current_row_idx] == 'Char of snake: ':
+                        elif menu3[current_row_idx] == "Char of snake: ":
                             options_menu(stdscr, current_row_idx)
                             stdscr.addstr(y - 4, x + 25,
-                                          '(Enter a char what do you want to use, if you don`t want to change a char just press enter)')
+                                          "(Enter a char what do you want to use, if you don`t want to change a char just press enter)")
                             char = stdscr.getch()
                             if char in [10, 13]:
                                 pass
                             else:
                                 char_of_snake = chr(char)
-                        elif menu3[current_row_idx] == 'Char of apple: ':
+                        elif menu3[current_row_idx] == "Char of apple: ":
                             options_menu(stdscr, current_row_idx)
                             stdscr.addstr(y - 3, x + 25,
-                                          '(Enter a char what do you want to use, if you don`t want to change a char just press enter)')
+                                          "(Enter a char what do you want to use, if you don`t want to change a char just press enter)")
                             char = stdscr.getch()
                             if char in [10, 13]:
                                 pass
                             else:
                                 char_of_apple = chr(char)
-                        elif menu3[current_row_idx] == 'Color of snake: ':
+                        elif menu3[current_row_idx] == "Color of snake: ":
                             options_menu(stdscr, current_row_idx)
                             stdscr.addstr(y - 1, x + 25,
-                                          'Choose one of the option(enter a number of color), if you don`t want to change color just press enter\n'
-                                          '1. Red\n'
-                                          '2. White\n'
-                                          '3. Cyan\n'
-                                          '4. Magenta\n'
-                                          '5. Green\n'
-                                          '6. Yellow\n'
-                                          '7. Blue')
+                                          "Choose one of the option(enter a number of color), if you don`t want to change color just press enter\n"
+                                          "1. Red\n"
+                                          "2. White\n"
+                                          "3. Cyan\n"
+                                          "4. Magenta\n"
+                                          "5. Green\n"
+                                          "6. Yellow\n"
+                                          "7. Blue")
                             color = stdscr.getch()
                             if color in [10, 13]:
                                 pass
@@ -403,17 +441,17 @@ def mainfunc(stdscr):
                             else:
                                 color_of_snake = chr(color)
                                 color_of_snake = int(color_of_snake)
-                        elif menu3[current_row_idx] == 'Color of apple: ':
+                        elif menu3[current_row_idx] == "Color of apple: ":
                             options_menu(stdscr, current_row_idx)
                             stdscr.addstr(y - 1, x + 25,
-                                          'Choose one of the option(enter a number of color), if you don`t want to change color just press enter\n'
-                                          '1. Red\n'
-                                          '2. White\n'
-                                          '3. Cyan\n'
-                                          '4. Magenta\n'
-                                          '5. Green\n'
-                                          '6. Yellow\n'
-                                          '7. Blue')
+                                          "Choose one of the option(enter a number of color), if you don`t want to change color just press enter\n"
+                                          "1. Red\n"
+                                          "2. White\n"
+                                          "3. Cyan\n"
+                                          "4. Magenta\n"
+                                          "5. Green\n"
+                                          "6. Yellow\n"
+                                          "7. Blue")
                             color = stdscr.getch()
                             if color in [10, 13]:
                                 pass
