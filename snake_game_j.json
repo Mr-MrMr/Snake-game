@@ -1,1 +1,0 @@
-"\n                {\n                    Connection {\n                        client: Snake_game_client,\n                    },\n                    ChangeDirection {\n                        client: Snake_game_client,\n                        direction: Down,\n                    },\n                }\n                "
