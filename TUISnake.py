@@ -175,6 +175,13 @@ def square_for_steps(stdscr):
         stdscr.attroff(color_pair(1))
         square_y -= 1
 
+def drawing_first_element(stdscr, apple_y, apple_x):
+    stdscr.addstr(SnakeParts[0][0], SnakeParts[0][1], '{}'.format(char_of_snake), color_pair(color_of_snake))
+    stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
+    stdscr.addstr(2, 3, 'Score : {}'.format(len(SnakeParts) - 1))
+    stdscr.refresh()
+
+
 
 def writing_json():
     myjsonfile = open("snake_game_j.json", "w")
@@ -191,25 +198,26 @@ def writing_json():
                 """.format(client_name, SnakeParts[0][2])
     json_string = json_string.replace("[", "{")
     json_string = json_string.replace("]", "}")
+    json_string = json_string.replace('\\n', '\n')
     json.dump(json_string, myjsonfile)
 
 
 def gameplay(stdscr):
-    global doineedtoaskthestep
+    global do_i_need_to_ask_the_step
     global SnakeParts
     h, w = stdscr.getmaxyx()
     h, w = stdscr.getmaxyx()
     apple_y = random.randint(2, h - 3)
     apple_x = random.randint(2, w - 3)
     stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
-    doineedtoaskthestep = 0
+    do_i_need_to_ask_the_step = 0
     snake_y = random.randint(2, h - 3)
     snake_x = random.randint(2, w - 3)
     stdscr.addstr(snake_y, snake_x, '{}'.format(char_of_snake), color_pair(color_of_snake))
     SnakeParts.append([snake_y, snake_x, ''])
     while True:
         global step
-        if doineedtoaskthestep == 0:
+        if do_i_need_to_ask_the_step == 0:
             step = stdscr.getch()
         if step == KEY_UP:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Up']
@@ -225,44 +233,25 @@ def gameplay(stdscr):
             writing_json()
         else:
             continue
-        if SnakeParts[0][2] == 'Up':
-            stdscr.addstr(SnakeParts[0][0], SnakeParts[0][1], '{}'.format(char_of_snake), color_pair(color_of_snake))
-            stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
-            stdscr.addstr(2, 3, 'Score : {}'.format(len(SnakeParts) - 1))
-            stdscr.refresh()
-        elif SnakeParts[0][2] == 'Down':
-            stdscr.addstr(SnakeParts[0][0], SnakeParts[0][1], '{}'.format(char_of_snake), color_pair(color_of_snake))
-            stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
-            stdscr.addstr(2, 3, 'Score : {}'.format(len(SnakeParts) - 1))
-            stdscr.refresh()
-        elif SnakeParts[0][2] == 'Right':
-            stdscr.addstr(SnakeParts[0][0], SnakeParts[0][1], '{}'.format(char_of_snake), color_pair(color_of_snake))
-            stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
-            stdscr.addstr(2, 3, 'Score : {}'.format(len(SnakeParts) - 1))
-            stdscr.refresh()
-        else:
-            stdscr.addstr(SnakeParts[0][0], SnakeParts[0][1], '{}'.format(char_of_snake), color_pair(color_of_snake))
-            stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
-            stdscr.addstr(2, 3, 'Score : {}'.format(len(SnakeParts) - 1))
-            stdscr.refresh()
+        drawing_first_element(stdscr, apple_y, apple_x)
         while True:
             halfdelay(1)
             step = stdscr.getch()
             if SnakeParts[0][2] == 'Up':
                 if step == KEY_RIGHT or step == KEY_LEFT:
-                    doineedtoaskthestep = 1
+                    do_i_need_to_ask_the_step = 1
                     break
             elif SnakeParts[0][2] == 'Down':
                 if step == KEY_RIGHT or step == KEY_LEFT:
-                    doineedtoaskthestep = 1
+                    do_i_need_to_ask_the_step = 1
                     break
             elif SnakeParts[0][2] == 'Right':
                 if step == KEY_UP or step == KEY_DOWN:
-                    doineedtoaskthestep = 1
+                    do_i_need_to_ask_the_step = 1
                     break
             elif SnakeParts[0][2] == "Left":
                 if step == KEY_UP or step == KEY_DOWN:
-                    doineedtoaskthestep = 1
+                    do_i_need_to_ask_the_step = 1
                     break
             if len(SnakeParts) == 1:
                 if SnakeParts[0][0] == apple_y and SnakeParts[0][1] == apple_x:
