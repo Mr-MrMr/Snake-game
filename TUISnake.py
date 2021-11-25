@@ -1,6 +1,6 @@
 from curses import *
 import sys
-import time
+import socket
 import random
 import time
 import json
@@ -175,12 +175,12 @@ def square_for_steps(stdscr):
         stdscr.attroff(color_pair(1))
         square_y -= 1
 
+
 def drawing_first_element(stdscr, apple_y, apple_x):
     stdscr.addstr(SnakeParts[0][0], SnakeParts[0][1], '{}'.format(char_of_snake), color_pair(color_of_snake))
     stdscr.addstr(apple_y, apple_x, '{}'.format(char_of_apple), color_pair(color_of_apple))
     stdscr.addstr(2, 3, 'Score : {}'.format(len(SnakeParts) - 1))
     stdscr.refresh()
-
 
 
 def writing_json():
@@ -200,6 +200,43 @@ def writing_json():
     json_string = json_string.replace("]", "}")
     json_string = json_string.replace('\\n', '\n')
     json.dump(json_string, myjsonfile)
+
+
+# Connecting to the server using TCP
+def connecting_to_server(stdscr):
+    global ip_address
+    global port
+    stdscr.clear()
+    h, w = stdscr.getmaxyx()
+    x_ip = w // 2 - len("Enter an ip address of the server:") // 2
+    stdscr.addstr(8, x_ip, "Enter an ip address of the server:")
+    stdscr.refresh()
+    echo()
+    stdscr.move(9, x_ip)
+    ip_address = stdscr.getstr().decode("utf-8")
+    stdscr.clear()
+    stdscr.addstr(8, x_ip, "Enter a port of the server:")
+    stdscr.refresh()
+    stdscr.move(9, x_ip)
+    port = stdscr.getstr().decode("utf-8")
+    noecho()
+    stdscr.refresh()
+    # Creating a socket
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Connecting socket with the server
+    server_socket.connect_ex((ip_address, int(port)))
+    totalsent = 0
+    phrase = "Hello world!"
+    phrase = str.encode(phrase)
+    while totalsent < len(phrase):
+        sent = server_socket.send(phrase)
+        if sent == 0:
+            endwin()
+            raise RuntimeError("Socket connection is broken")
+        totalsent += sent
+    server_socket.close()
+    endwin()
+    sys.exit()
 
 
 def gameplay(stdscr):
@@ -364,17 +401,7 @@ def mainfunc(stdscr):
                 endwin()
                 sys.exit()
             if menu[current_row_idx] == "PLAY MULTIPLAYER":
-                stdscr.clear()
-                h, w = stdscr.getmaxyx()
-                x_ip = w // 2 - len("Enter an ip address of the server:") // 2
-                stdscr.addstr(8, x_ip, "Enter an ip address of the server:")
-                stdscr.refresh()
-                echo()
-                stdscr.move(9, x_ip)
-                ip_address = stdscr.getstr().decode("utf-8")
-                noecho()
-                stdscr.refresh()
-                time.sleep(2)
+                connecting_to_server(stdscr)
             elif menu[current_row_idx] == "OPTIONS":
                 current_row_idx = 0
                 while True:
