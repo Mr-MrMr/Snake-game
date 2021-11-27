@@ -239,6 +239,12 @@ def connecting_to_server(stdscr):
             endwin()
             raise RuntimeError("Socket connection is broken")
         totalsent += sent
+    server_json_string = server_socket.recv(1024).decode("utf-8")
+    loaded_json_string = json.loads(server_json_string)
+    stdscr.clear()
+    stdscr.addstr(h // 2, 0, json.dumps(loaded_json_string, indent=4, sort_keys=True))
+    stdscr.refresh()
+    time.sleep(5)
     server_socket.close()
     endwin()
     sys.exit()
