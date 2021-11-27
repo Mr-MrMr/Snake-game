@@ -183,23 +183,20 @@ def drawing_first_element(stdscr, apple_y, apple_x):
     stdscr.refresh()
 
 
-def writing_json():
-    myjsonfile = open("snake_game_j.json", "w")
+def writing_json(type):
     json_string = """
                 [
-                    Connection [
-                        client: {0},
-                    ],
-                    ChangeDirection [
-                        client: {0},
-                        direction: {1},
+                    Client [
+                        client:{0},
+                        kind:{1}
                     ],
                 ]
-                """.format(client_name, SnakeParts[0][2])
+                """.format(client_name, type)
     json_string = json_string.replace("[", "{")
     json_string = json_string.replace("]", "}")
-    json_string = json_string.replace('\\n', '\n')
-    json.dump(json_string, myjsonfile)
+    binary_json_string = ' '.join(format(ord(x), 'b') for x in json_string)
+    binary_json_string = str.encode(binary_json_string)
+    return binary_json_string
 
 
 # Connecting to the server using TCP
@@ -224,12 +221,20 @@ def connecting_to_server(stdscr):
     # Creating a socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Connecting socket with the server
-    server_socket.connect_ex((ip_address, int(port)))
+    code_of_operation = server_socket.connect_ex((ip_address, int(port)))
+    if code_of_operation != 0:
+        stdscr.clear()
+        stdscr.addstr(h // 2, w // 2, "Unable to connect to the server")
+        stdscr.refresh()
+        time.sleep(2)
+        mainfunc(stdscr)
+    stdscr.clear()
+    stdscr.addstr(h // 2, w // 2, "Connecting to the server...")
+    stdscr.refresh()
+    binary_json_string = writing_json("connect")
     totalsent = 0
-    phrase = "Hello world!"
-    phrase = str.encode(phrase)
-    while totalsent < len(phrase):
-        sent = server_socket.send(phrase)
+    while totalsent < len(binary_json_string):
+        sent = server_socket.send(binary_json_string)
         if sent == 0:
             endwin()
             raise RuntimeError("Socket connection is broken")
@@ -237,6 +242,10 @@ def connecting_to_server(stdscr):
     server_socket.close()
     endwin()
     sys.exit()
+
+
+def multiplayer_gameplay(stdscr):
+    connecting_to_server(stdscr)
 
 
 def gameplay(stdscr):
@@ -258,16 +267,12 @@ def gameplay(stdscr):
             step = stdscr.getch()
         if step == KEY_UP:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Up']
-            writing_json()
         elif step == KEY_DOWN:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Down']
-            writing_json()
         elif step == KEY_RIGHT:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], 'Right']
-            writing_json()
         elif step == KEY_LEFT:
             SnakeParts[0] = [SnakeParts[0][0], SnakeParts[0][1], "Left"]
-            writing_json()
         else:
             continue
         drawing_first_element(stdscr, apple_y, apple_x)
@@ -401,7 +406,7 @@ def mainfunc(stdscr):
                 endwin()
                 sys.exit()
             if menu[current_row_idx] == "PLAY MULTIPLAYER":
-                connecting_to_server(stdscr)
+                multiplayer_gameplay(stdscr)
             elif menu[current_row_idx] == "OPTIONS":
                 current_row_idx = 0
                 while True:
