@@ -185,6 +185,7 @@ def drawing_first_element(stdscr, apple_y, apple_x):
     stdscr.refresh()
 
 
+# Creates json string for the server, q means quotes
 def writing_json(type):
     json_string = """
                 [
@@ -195,8 +196,6 @@ def writing_json(type):
     json_string = json_string.replace("[", "{")
     json_string = json_string.replace("]", "}")
     json_string = json_string.replace("q", "\"")
-    #binary_json_string = ''.join(format(ord(x), '08b') for x in json_string)
-    #binary_json_string = str.encode(binary_json_string)
     binary_json_string = bytes(json_string, 'utf-8')
     return binary_json_string
 
@@ -220,9 +219,9 @@ def connecting_to_server(stdscr):
     port = stdscr.getstr().decode("utf-8")
     noecho()
     stdscr.refresh()
-    # Creating a socket
+    # Creates a socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Connecting socket with the server
+    # Connects socket with the server
     code_of_operation = server_socket.connect_ex((ip_address, int(port)))
     if code_of_operation != 0:
         stdscr.clear()
@@ -235,16 +234,23 @@ def connecting_to_server(stdscr):
     stdscr.refresh()
     binary_json_string = writing_json("connect")
     send_to_a_server(server_socket, binary_json_string)
-    time.sleep(1)
     binary_json_string = writing_json("get_grid")
+    # Delay
+    time.sleep(0.08)
     send_to_a_server(server_socket, binary_json_string)
     server_json_string = server_socket.recv(1024**3).decode("utf-8")
     loaded_json_string = json.loads(server_json_string)
+    binary_json_string = writing_json("disconnect")
+    # Delay
+    time.sleep(0.08)
+    send_to_a_server(server_socket, binary_json_string)
     server_socket.close()
     endwin()
-    sys.exit()
+    # Return json string from the server
+    return loaded_json_string
 
 
+# Sends json string to a server
 def send_to_a_server(server_socket, binary_json_string):
     totalsent = 0
     while totalsent < len(binary_json_string):
@@ -256,13 +262,30 @@ def send_to_a_server(server_socket, binary_json_string):
 
 
 def multiplayer_gameplay(stdscr):
-    connecting_to_server(stdscr)
+    loaded_json_string = connecting_to_server(stdscr)
+    # Parsing json string
+    for parameter in loaded_json_string["data"][0]:
+        # If it's color then client skips it
+        if parameter == "color":
+            continue
+        # If it's a snake part, then client prints "Snake"
+        if loaded_json_string["data"][0][parameter] == "snake_part":
+            print("Snake")
+            continue
+        # If it's an apple, then client prints "Apple"
+        elif loaded_json_string["data"][0][parameter] == "Apple":
+            print("Apple")
+            continue
+        # if it's coordinates, then client prints them
+        if parameter == "coordinates":
+            print("x: {}".format(loaded_json_string["data"][0][parameter]["x"]))
+            print("y: {}".format(loaded_json_string["data"][0][parameter]["y"]))
 
 
+# All singleplayer gameplay
 def gameplay(stdscr):
     global do_i_need_to_ask_the_step
     global SnakeParts
-    h, w = stdscr.getmaxyx()
     h, w = stdscr.getmaxyx()
     apple_y = random.randint(2, h - 3)
     apple_x = random.randint(2, w - 3)
