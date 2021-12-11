@@ -1,3 +1,4 @@
+import os
 from curses import *
 import sys
 import socket
@@ -7,16 +8,16 @@ import json
 
 menu = ["PLAY", "PLAY MULTIPLAYER", "OPTIONS", "EXIT"]  # Menu for start
 menu2 = ["PLAY AGAIN", "EXIT"]  # Menu for loses
-menu3 = ["Char of snake: ", "Char of apple: ", "Color of snake: ", "Color of apple: ", "Back"]
+menu3 = ["Char of snake: ", "Char of apple: ", "Color of snake: ", "Color of apple: ", "Back"]  # Menu for options
 char_of_snake = '#'
 char_of_apple = '8'
-color_of_snake = 5
-color_of_apple = 1
+color_of_snake = 5  # Green color
+color_of_apple = 1  # Red color
 SnakeParts = []  # Snake`s parts
 client_name = "Snake_game_client"
 
 
-# Making menu
+# Making start menu
 def start_menu(stdscr, selected_row_idx):
     stdscr.clear()
     h, w = stdscr.getmaxyx()
@@ -55,7 +56,7 @@ def options_menu(stdscr, selected_row_idx):
         stdscr.refresh()
 
 
-def lose_menu(stdscr, selected_row_idx):
+def losing_menu(stdscr, selected_row_idx):
     stdscr.clear()
     h, w, = stdscr.getmaxyx()
     for idx, row in enumerate(menu2):
@@ -80,7 +81,7 @@ def using_lose_menu(stdscr):
     global SnakeParts
     current_row_idx = 0
     while True:
-        lose_menu(stdscr, current_row_idx)
+        losing_menu(stdscr, current_row_idx)
         lose_key = stdscr.getch()
         if lose_key == KEY_UP and current_row_idx > 0:
             current_row_idx -= 1
@@ -96,6 +97,7 @@ def using_lose_menu(stdscr):
                 sys.exit()
 
 
+# Generates a new apple
 def eating_apples(stdscr):
     global apple_y
     global apple_x
@@ -186,16 +188,16 @@ def drawing_first_element(stdscr, apple_y, apple_x):
 def writing_json(type):
     json_string = """
                 [
-                    Client [
-                        client:{0},
-                        kind:{1}
-                    ],
-                ]
+                    qclientq: q{0}q,
+                    qkindq: q{1}q
+                    ]
                 """.format(client_name, type)
     json_string = json_string.replace("[", "{")
     json_string = json_string.replace("]", "}")
-    binary_json_string = ' '.join(format(ord(x), 'b') for x in json_string)
-    binary_json_string = str.encode(binary_json_string)
+    json_string = json_string.replace("q", "\"")
+    #binary_json_string = ''.join(format(ord(x), '08b') for x in json_string)
+    #binary_json_string = str.encode(binary_json_string)
+    binary_json_string = bytes(json_string, 'utf-8')
     return binary_json_string
 
 
@@ -224,7 +226,7 @@ def connecting_to_server(stdscr):
     code_of_operation = server_socket.connect_ex((ip_address, int(port)))
     if code_of_operation != 0:
         stdscr.clear()
-        stdscr.addstr(h // 2, w // 2, "Unable to connect to the server")
+        stdscr.addstr(h // 2, w // 2, "Unable to connect to the server: {}".format(os.strerror(code_of_operation)))
         stdscr.refresh()
         time.sleep(2)
         mainfunc(stdscr)
@@ -232,6 +234,18 @@ def connecting_to_server(stdscr):
     stdscr.addstr(h // 2, w // 2, "Connecting to the server...")
     stdscr.refresh()
     binary_json_string = writing_json("connect")
+    send_to_a_server(server_socket, binary_json_string)
+    time.sleep(1)
+    binary_json_string = writing_json("get_grid")
+    send_to_a_server(server_socket, binary_json_string)
+    server_json_string = server_socket.recv(1024**3).decode("utf-8")
+    loaded_json_string = json.loads(server_json_string)
+    server_socket.close()
+    endwin()
+    sys.exit()
+
+
+def send_to_a_server(server_socket, binary_json_string):
     totalsent = 0
     while totalsent < len(binary_json_string):
         sent = server_socket.send(binary_json_string)
@@ -239,15 +253,6 @@ def connecting_to_server(stdscr):
             endwin()
             raise RuntimeError("Socket connection is broken")
         totalsent += sent
-    server_json_string = server_socket.recv(1024).decode("utf-8")
-    loaded_json_string = json.loads(server_json_string)
-    stdscr.clear()
-    stdscr.addstr(h // 2, 0, json.dumps(loaded_json_string, indent=4, sort_keys=True))
-    stdscr.refresh()
-    time.sleep(5)
-    server_socket.close()
-    endwin()
-    sys.exit()
 
 
 def multiplayer_gameplay(stdscr):
