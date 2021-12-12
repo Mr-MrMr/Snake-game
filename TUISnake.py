@@ -261,8 +261,59 @@ def send_to_a_server(server_socket, binary_json_string):
         totalsent += sent
 
 
+def draw_field_multiplayer(stdscr, x, y):
+    stdscr.clear()
+    h, w = stdscr.getmaxyx()
+    # If window is too small for a field then say about it to a user and exit
+    if w < x or h < y:
+        stdscr.addstr(h // 2, 0, "Make your window bigger: {0}x{1}".format(x + 2, y + 2))
+        stdscr.refresh()
+        time.sleep(3)
+        sys.exit()
+    field_x = 0
+    field_y = 0
+    while field_x != x:
+        stdscr.attron(color_pair(1))
+        stdscr.addstr(field_y, field_x, '-')
+        stdscr.refresh()
+        stdscr.attroff(color_pair(1))
+        field_x += 1
+    field_x -= 1
+    while field_y != y:
+        stdscr.attron(color_pair(1))
+        stdscr.addstr(field_y, field_x, '|')
+        stdscr.refresh()
+        stdscr.attroff(color_pair(1))
+        field_y += 1
+    field_y -= 1
+    while field_x != 0:
+        stdscr.attron(color_pair(1))
+        stdscr.addstr(field_y, field_x - 1, '-')
+        stdscr.refresh()
+        stdscr.attroff(color_pair(1))
+        field_x -= 1
+    while field_y != 0:
+        stdscr.attron(color_pair(1))
+        stdscr.addstr(field_y, field_x, '|')
+        stdscr.refresh()
+        stdscr.attroff(color_pair(1))
+        field_y -= 1
+
+
+def draw_objects(stdscr, snakeparts, apples):
+    for i in range(len(snakeparts)):
+        stdscr.addstr(int(snakeparts[i][0]), int(snakeparts[i][1]), '{}'.format(char_of_snake), color_pair(color_of_snake))
+    for i in range(len(apples)):
+        stdscr.addstr(int(apples[i][0]), int(apples[i][1]), '{}'.format(char_of_apple), color_pair(color_of_apple))
+    stdscr.refresh()
+
+
 def multiplayer_gameplay(stdscr):
     loaded_json_string = connecting_to_server(stdscr)
+    snakeparts = []
+    apples = []
+    is_is_a_snake = 0 # This variable indicates whether the object in a string a snake
+    # If this variable equals 1 then the object is a snake, if the variable equals 2 then the object is an apple
     # Parsing json string
     for parameter in loaded_json_string["data"][0]:
         # If it's color then client skips it
@@ -271,15 +322,28 @@ def multiplayer_gameplay(stdscr):
         # If it's a snake part, then client prints "Snake"
         if loaded_json_string["data"][0][parameter] == "snake_part":
             print("Snake")
+            is_it_a_snake = 1
             continue
         # If it's an apple, then client prints "Apple"
         elif loaded_json_string["data"][0][parameter] == "Apple":
             print("Apple")
+            is_it_a_snake = 2
             continue
         # if it's coordinates, then client prints them
         if parameter == "coordinates":
+            if is_it_a_snake == 1:
+                snakeparts.append("{0}{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
+            else:
+                apples.append("{0}{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
             print("x: {}".format(loaded_json_string["data"][0][parameter]["x"]))
             print("y: {}".format(loaded_json_string["data"][0][parameter]["y"]))
+            pass
+    x = loaded_json_string["size"][0]
+    y = loaded_json_string["size"][1]
+    print("x: {0}, y : {1}".format(x, y))
+    draw_field_multiplayer(stdscr, x, y)
+    draw_objects(stdscr, snakeparts, apples)
+    time.sleep(5)
 
 
 # All singleplayer gameplay
