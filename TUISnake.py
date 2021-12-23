@@ -187,12 +187,22 @@ def drawing_first_element(stdscr, apple_y, apple_x):
 
 # Creates json string for the server, q means quotes
 def writing_json(type):
-    json_string = """
-                [
-                    qclientq: q{0}q,
-                    qkindq: q{1}q
+    if type != "connect" and type != "disconnect" and type != "get_grid":
+        json_string = """
+                    [
+                        qclientq: q{0}q,
+                        qkindq: [
+                            qchange_directionq: q{1}q
+                        ]
                     ]
-                """.format(client_name, type)
+        """.format(client_name, type)
+    else:
+        json_string = """
+                    [
+                        qclientq: q{0}q,
+                        qkindq: q{1}q
+                    ]
+                    """.format(client_name, type)
     json_string = json_string.replace("[", "{")
     json_string = json_string.replace("]", "}")
     json_string = json_string.replace("q", "\"")
@@ -202,8 +212,10 @@ def writing_json(type):
 
 # Connecting to the server using TCP
 def connecting_to_server(stdscr):
+    global client_name
     global ip_address
     global port
+    global server_socket
     stdscr.clear()
     h, w = stdscr.getmaxyx()
     x_ip = w // 2 - len("Enter an ip address of the server:") // 2
@@ -233,18 +245,17 @@ def connecting_to_server(stdscr):
     stdscr.addstr(h // 2, w // 2, "Connecting to the server...")
     stdscr.refresh()
     binary_json_string = writing_json("connect")
+    endwin()
     send_to_a_server(server_socket, binary_json_string)
+    # Gets a new name(to make all names unique)
+    client_name = server_socket.recv(1024**3).decode("utf-8")
+    client_name = client_name[1:len(client_name) - 1]
     binary_json_string = writing_json("get_grid")
     # Delay
     time.sleep(0.08)
     send_to_a_server(server_socket, binary_json_string)
     server_json_string = server_socket.recv(1024**3).decode("utf-8")
     loaded_json_string = json.loads(server_json_string)
-    binary_json_string = writing_json("disconnect")
-    # Delay
-    time.sleep(0.08)
-    send_to_a_server(server_socket, binary_json_string)
-    server_socket.close()
     endwin()
     # Return json string from the server
     return loaded_json_string
@@ -301,20 +312,57 @@ def draw_field_multiplayer(stdscr, x, y):
 
 
 def draw_objects(stdscr, snakeparts, apples):
+    endwin()
+    h, w = stdscr.getmaxyx()
     for i in range(len(snakeparts)):
-        stdscr.addstr(int(snakeparts[i][0]), int(snakeparts[i][1]), '{}'.format(char_of_snake), color_pair(color_of_snake))
-    for i in range(len(apples)):
-        stdscr.addstr(int(apples[i][0]), int(apples[i][1]), '{}'.format(char_of_apple), color_pair(color_of_apple))
+        x = ""
+        y_snake = ""
+        y_is_passed = 0
+        for m in range(len(str(snakeparts[i]))):
+            if snakeparts[i][m] == ':':
+                y_is_passed = 1
+                continue
+            elif y_is_passed == 1:
+                x = x + snakeparts[i][m]
+                continue
+            else:
+                y_snake = y_snake + snakeparts[i][m]
+                continue
+    # y_size variable is a size of a field by y axe
+    # We need to subtract y_snake from maximum size because ncurses's (0;0) coordinate located in the upper left corner
+    # But server's (0;0) coordinate located in the lower left corner. We need to do an inversion
+    y_snake = y_size - int(y_snake)
+    endwin()
+    print("Y and X os a snake: {0}, {1}".format(y_snake, int(x)))
+    stdscr.addstr(int(y_snake), int(x), '{}'.format(char_of_snake), color_pair(color_of_snake))
+    x = ""
+    y = ""
+    y_is_passed = 0
+    #for i in range(len(apples)):
+    #    x = ""
+    #    y = ""
+    #    y_is_passed = 0
+    #    for m in range(len(str(apples[i]))):
+    #           if apples[i][m] == ':':
+    #            y_is_passed = 1
+    #            continue
+    #        elif y_is_passed == 1:
+    #            x = x + apples[i][m]
+    #            continue
+    #        else:
+    #            y = y + apples[i][m]
+    #            continue
+    #stdscr.addstr(int(y), int(x), '{}'.format(char_of_apple), color_pair(color_of_apple))
     stdscr.refresh()
 
 
-def multiplayer_gameplay(stdscr):
-    loaded_json_string = connecting_to_server(stdscr)
+def json_parse(loaded_json_string):
+    global snakeparts
+    global apples
+    global x_size
+    global y_size
     snakeparts = []
     apples = []
-    is_is_a_snake = 0 # This variable indicates whether the object in a string a snake
-    # If this variable equals 1 then the object is a snake, if the variable equals 2 then the object is an apple
-    # Parsing json string
     for parameter in loaded_json_string["data"][0]:
         # If it's color then client skips it
         if parameter == "color":
@@ -332,18 +380,93 @@ def multiplayer_gameplay(stdscr):
         # if it's coordinates, then client prints them
         if parameter == "coordinates":
             if is_it_a_snake == 1:
-                snakeparts.append("{0}{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
+                snakeparts.append("{0}:{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
+                endwin()
+                print(loaded_json_string["data"][0][parameter]["y"])
+                print(loaded_json_string["data"][0][parameter]["x"])
             else:
-                apples.append("{0}{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
-            print("x: {}".format(loaded_json_string["data"][0][parameter]["x"]))
-            print("y: {}".format(loaded_json_string["data"][0][parameter]["y"]))
-            pass
-    x = loaded_json_string["size"][0]
-    y = loaded_json_string["size"][1]
+                apples.append("{0}:{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
+                print("x: {}".format(loaded_json_string["data"][0][parameter]["x"]))
+                print("y: {}".format(loaded_json_string["data"][0][parameter]["y"]))
+        else:
+            endwin()
+            print("New: {}".format(loaded_json_string["data"][0][parameter]))
+    x_size = loaded_json_string["size"][0]
+    y_size = loaded_json_string["size"][1]
     print("x: {0}, y : {1}".format(x, y))
-    draw_field_multiplayer(stdscr, x, y)
+    print("Snakeparts: {}".format(snakeparts))
+
+
+def multiplayer_gameplay(stdscr):
+    loaded_json_string = connecting_to_server(stdscr)
+    is_is_a_snake = 0 # This variable indicates whether the object in a string a snake
+    # If this variable equals 1 then the object is a snake, if the variable equals 2 then the object is an apple
+    # Parsing json string
+    json_parse(loaded_json_string)
+    draw_field_multiplayer(stdscr, x_size, y_size)
     draw_objects(stdscr, snakeparts, apples)
-    time.sleep(5)
+    time.sleep(2)
+    while True:
+        while True:
+            halfdelay(1)
+            step = stdscr.getch()
+            if step == KEY_UP:
+                binary_json_string = writing_json("up")
+                send_to_a_server(server_socket, binary_json_string)
+                binary_json_string = writing_json("get_grid")
+                time.sleep(0.01)
+                send_to_a_server(server_socket, binary_json_string)
+                time.sleep(0.01)
+                server_json_string = server_socket.recv(1024**3).decode("utf-8")
+                loaded_json_string = json.loads(server_json_string)
+                break
+            elif step == KEY_DOWN:
+                binary_json_string = writing_json("down")
+                send_to_a_server(server_socket, binary_json_string)
+                binary_json_string = writing_json("get_grid")
+                time.sleep(0.01)
+                send_to_a_server(server_socket, binary_json_string)
+                time.sleep(0.01)
+                server_json_string = server_socket.recv(1024**3).decode("utf-8")
+                loaded_json_string = json.loads(server_json_string)
+                break
+            elif step == KEY_LEFT:
+                binary_json_string = writing_json("left")
+                send_to_a_server(server_socket, binary_json_string)
+                binary_json_string = writing_json("get_grid")
+                time.sleep(0.01)
+                send_to_a_server(server_socket, binary_json_string)
+                time.sleep(0.01)
+                server_json_string = server_socket.recv(1024**3).decode("utf-8")
+                loaded_json_string = json.loads(server_json_string)
+                break
+            elif step == KEY_RIGHT:
+                binary_json_string = writing_json("right")
+                send_to_a_server(server_socket, binary_json_string)
+                binary_json_string = writing_json("get_grid")
+                time.sleep(0.01)
+                send_to_a_server(server_socket, binary_json_string)
+                time.sleep(0.01)
+                server_json_string = server_socket.recv(1024**3).decode("utf-8")
+                loaded_json_string = json.loads(server_json_string)
+                break
+            else:
+                pass
+            binary_json_string = writing_json("get_grid")
+            send_to_a_server(server_socket, binary_json_string)
+            time.sleep(0.01)
+            server_json_string = server_socket.recv(1024**3).decode("utf-8")
+            loaded_json_string = json.loads(server_json_string)
+            break
+        json_parse(loaded_json_string)
+        stdscr.addstr(5, 5, "{0}, {1}".format(snakeparts, apples))
+        stdscr.refresh()
+        endwin()
+        print(snakeparts)
+        print(apples)
+        draw_field_multiplayer(stdscr, x_size, y_size)
+        draw_objects(stdscr, snakeparts, apples)
+        continue
 
 
 # All singleplayer gameplay
