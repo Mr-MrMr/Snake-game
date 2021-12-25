@@ -249,12 +249,15 @@ def connecting_to_server(stdscr):
     send_to_a_server(server_socket, binary_json_string)
     # Gets a new name(to make all names unique)
     client_name = server_socket.recv(1024**3).decode("utf-8")
+    # Deletes quotes
     client_name = client_name[1:len(client_name) - 1]
     binary_json_string = writing_json("get_grid")
     # Delay
     time.sleep(0.08)
     send_to_a_server(server_socket, binary_json_string)
     server_json_string = server_socket.recv(1024**3).decode("utf-8")
+    endwin()
+    print(server_json_string)
     loaded_json_string = json.loads(server_json_string)
     endwin()
     # Return json string from the server
@@ -328,13 +331,14 @@ def draw_objects(stdscr, snakeparts, apples):
             else:
                 y_snake = y_snake + snakeparts[i][m]
                 continue
+        y_snake = y_size - int(y_snake)
+        stdscr.addstr(int(y_snake), int(x), '{}'.format(char_of_snake), color_pair(color_of_snake))
+        endwin()
+        print("Y and X of a snake: {0}, {1}".format(y_snake, int(x)))
+        print("Snake: {}".format(snakeparts[i]))
     # y_size variable is a size of a field by y axe
     # We need to subtract y_snake from maximum size because ncurses's (0;0) coordinate located in the upper left corner
     # But server's (0;0) coordinate located in the lower left corner. We need to do an inversion
-    y_snake = y_size - int(y_snake)
-    endwin()
-    print("Y and X os a snake: {0}, {1}".format(y_snake, int(x)))
-    stdscr.addstr(int(y_snake), int(x), '{}'.format(char_of_snake), color_pair(color_of_snake))
     x = ""
     y = ""
     y_is_passed = 0
@@ -363,45 +367,48 @@ def json_parse(loaded_json_string):
     global y_size
     snakeparts = []
     apples = []
-    for parameter in loaded_json_string["data"][0]:
-        # If it's color then client skips it
-        if parameter == "color":
-            continue
-        # If it's a snake part, then client prints "Snake"
-        if loaded_json_string["data"][0][parameter] == "snake_part":
-            print("Snake")
-            is_it_a_snake = 1
-            continue
-        # If it's an apple, then client prints "Apple"
-        elif loaded_json_string["data"][0][parameter] == "Apple":
-            print("Apple")
-            is_it_a_snake = 2
-            continue
-        # if it's coordinates, then client prints them
-        if parameter == "coordinates":
-            if is_it_a_snake == 1:
-                snakeparts.append("{0}:{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
-                endwin()
-                print(loaded_json_string["data"][0][parameter]["y"])
-                print(loaded_json_string["data"][0][parameter]["x"])
+    is_is_a_snake = 0 # This variable indicates whether the object in a string a snake
+    # If this variable equals 1 then the object is a snake, if the variable equals 2 then the object is an apple
+    # Parsing json string
+    for number in range(0, len(loaded_json_string["data"])):
+        endwin()
+        print("Here is {} part: {}".format(number, loaded_json_string["data"][number]))
+        for parameter in loaded_json_string["data"][number]:
+            # If it's color then client skips it
+            if parameter == "color":
+                continue
+            # If it's a snake part, then client prints "Snake"
+            if loaded_json_string["data"][number][parameter] == "snake_part":
+                print("Snake")
+                is_it_a_snake = 1
+                continue
+            # If it's an apple, then client prints "Apple"
+            elif loaded_json_string["data"][number][parameter] == "Apple":
+                print("Apple")
+                is_it_a_snake = 2
+                continue
+            # if it's coordinates, then client prints them
+            if parameter == "coordinates":
+                if is_it_a_snake == 1:
+                    snakeparts.append("{0}:{1}".format(loaded_json_string["data"][number][parameter]["y"], loaded_json_string["data"][number][parameter]["x"]))
+                    endwin()
+                    print("y_snake: {}".format(loaded_json_string["data"][number][parameter]["y"]))
+                    print("x_snake: {}".format(loaded_json_string["data"][number][parameter]["x"]))
+                else:
+                    apples.append("{0}:{1}".format(loaded_json_string["data"][number][parameter]["y"], loaded_json_string["data"][number][parameter]["x"]))
+                    print("x: {}".format(loaded_json_string["data"][number][parameter]["x"]))
+                    print("y: {}".format(loaded_json_string["data"][number][parameter]["y"]))
             else:
-                apples.append("{0}:{1}".format(loaded_json_string["data"][0][parameter]["y"], loaded_json_string["data"][0][parameter]["x"]))
-                print("x: {}".format(loaded_json_string["data"][0][parameter]["x"]))
-                print("y: {}".format(loaded_json_string["data"][0][parameter]["y"]))
-        else:
-            endwin()
-            print("New: {}".format(loaded_json_string["data"][0][parameter]))
+                endwin()
+                print("New: {}".format(loaded_json_string["data"][number][parameter]))
     x_size = loaded_json_string["size"][0]
     y_size = loaded_json_string["size"][1]
-    print("x: {0}, y : {1}".format(x, y))
+    print("x_size: {0}, y_size : {1}".format(x, y))
     print("Snakeparts: {}".format(snakeparts))
 
 
 def multiplayer_gameplay(stdscr):
     loaded_json_string = connecting_to_server(stdscr)
-    is_is_a_snake = 0 # This variable indicates whether the object in a string a snake
-    # If this variable equals 1 then the object is a snake, if the variable equals 2 then the object is an apple
-    # Parsing json string
     json_parse(loaded_json_string)
     draw_field_multiplayer(stdscr, x_size, y_size)
     draw_objects(stdscr, snakeparts, apples)
@@ -459,8 +466,6 @@ def multiplayer_gameplay(stdscr):
             loaded_json_string = json.loads(server_json_string)
             break
         json_parse(loaded_json_string)
-        stdscr.addstr(5, 5, "{0}, {1}".format(snakeparts, apples))
-        stdscr.refresh()
         endwin()
         print(snakeparts)
         print(apples)
