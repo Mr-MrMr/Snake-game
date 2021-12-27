@@ -342,22 +342,22 @@ def draw_objects(stdscr, snakeparts, apples):
     x = ""
     y = ""
     y_is_passed = 0
-    #for i in range(len(apples)):
-    #    x = ""
-    #    y = ""
-    #    y_is_passed = 0
-    #    for m in range(len(str(apples[i]))):
-    #           if apples[i][m] == ':':
-    #            y_is_passed = 1
-    #            continue
-    #        elif y_is_passed == 1:
-    #            x = x + apples[i][m]
-    #            continue
-    #        else:
-    #            y = y + apples[i][m]
-    #            continue
-    #stdscr.addstr(int(y), int(x), '{}'.format(char_of_apple), color_pair(color_of_apple))
-    stdscr.refresh()
+    for i in range(len(apples)):
+        x = ""
+        y = ""
+        y_is_passed = 0
+        for m in range(len(str(apples[i]))):
+            if apples[i][m] == ':':
+                y_is_passed = 1
+                continue
+            elif y_is_passed == 1:
+                x = x + apples[i][m]
+                continue
+            else:
+                y = y + apples[i][m]
+                continue
+        stdscr.addstr(int(y), int(x), '{}'.format(char_of_apple), color_pair(color_of_apple))
+        stdscr.refresh()
 
 
 def json_parse(loaded_json_string):
