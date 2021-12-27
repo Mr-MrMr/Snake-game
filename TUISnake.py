@@ -367,7 +367,7 @@ def json_parse(loaded_json_string):
     global y_size
     snakeparts = []
     apples = []
-    is_is_a_snake = 0 # This variable indicates whether the object in a string a snake
+    is_it_a_snake = 0 # This variable indicates whether the object in a string a snake
     # If this variable equals 1 then the object is a snake, if the variable equals 2 then the object is an apple
     # Parsing json string
     for number in range(0, len(loaded_json_string["data"])):
