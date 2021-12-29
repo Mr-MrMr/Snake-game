@@ -412,7 +412,6 @@ def multiplayer_gameplay(stdscr):
     json_parse(loaded_json_string)
     draw_field_multiplayer(stdscr, x_size, y_size)
     draw_objects(stdscr, snakeparts, apples)
-    time.sleep(2)
     while True:
         while True:
             halfdelay(1)
