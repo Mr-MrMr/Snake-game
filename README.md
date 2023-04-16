@@ -1,2 +1,2 @@
 # Snake-game
-Snake-game with multiplayer support
+Client for Snake-game with multiplayer support
